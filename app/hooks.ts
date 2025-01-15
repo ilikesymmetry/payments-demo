@@ -6,7 +6,7 @@ export function useBasePay(args?: {
   usdcAddress?: Address;
 }) {
   const paymentEscrowAddress =
-    args?.paymentEscrowAddress ?? "0xDE6856Fb76b4093A92d640831A7F06A4E9aBF11c";
+    args?.paymentEscrowAddress ?? "0x2093e2a590C3a3A0f8433126131e871b76B8C42D";
   const usdcAddress =
     args?.usdcAddress ?? "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
   const { signSpendPermission } = useSpendPermission();
@@ -41,6 +41,7 @@ export function useBasePay(args?: {
         [operator, merchant, feeBps, feeRecipient]
       ),
     });
+    console.log(res);
     return res;
   }
 
