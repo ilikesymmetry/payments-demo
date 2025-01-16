@@ -1,7 +1,7 @@
 'use client';
 
 import { zeroAddress } from "viem";
-import { useBasePay } from "./hooks";
+import { useBasePay } from "../lib/hooks";
 
 export default function App() {
   const operator = zeroAddress // TODO fill in
