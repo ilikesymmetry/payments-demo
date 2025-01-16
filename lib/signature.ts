@@ -10,7 +10,7 @@ const spendPermissionManagerAddress =
 const nonRepeatingPeriod = 281474976672000; // max uint48, period does not repeat
 
 const paymentEscrowAddress =
-  "0x2093e2a590C3a3A0f8433126131e871b76B8C42D" as Address;
+  "0x1901D7DFb5614F85D805C3adb987dB566B1d40Ed" as Address;
 const usdcAddress = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Address;
 
 export async function signSpendPermission({
