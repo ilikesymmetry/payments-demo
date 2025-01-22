@@ -1,7 +1,9 @@
 'use client';
 
+import Link from "next/link";
 import { useBasePay } from "../lib/hooks";
 import { FEE_BPS, FEE_RECIPIENT, MERCHANT, OPERATOR } from "@/lib/constants";
+import { baseSepolia } from "viem/chains";
 
 export default function App() {
   // TODO fill in
@@ -9,13 +11,13 @@ export default function App() {
   const feeBps = FEE_BPS
   const feeRecipient = FEE_RECIPIENT
 
-  const {spendPermission, signature, authorized, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
+  const {spendPermission, signature, authorizationTxHash, captureTxHash, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
 
   return (
     <div className="flex items-center justify-center h-screen">
-      <div className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4 w-[180px] relative">
         <button 
-          className="bg-[#0052FF] px-6 py-3.5 rounded-md font-bold flex items-center space-x-2 text-lg"
+          className="bg-[#0052FF] px-6 py-3 rounded-md font-bold flex items-center justify-center space-x-2 text-lg"
           onClick={() => requestUsdcPayment({
             usdAmount: 0.01, 
             operator: OPERATOR, 
@@ -30,18 +32,28 @@ export default function App() {
           </svg>
           <p>Base Pay</p>
         </button>
-        {spendPermission && signature && !authorized && (
-          <button 
-            className="border rounded-md px-6 py-3.5"
-            onClick={() => authorizeUsdcPayment()}
-          >Auth</button>
-        )}
-        {spendPermission && signature && authorized && (
-          <button 
-            className="border rounded-md px-6 py-3.5"
-            onClick={() => captureUsdcPayment()}
-          >Capture</button>
-        )}
+        <div className="absolute top-12 w-full flex flex-col space-y-4">
+          {spendPermission && signature && !authorizationTxHash && (
+            <button className="border rounded-md px-6 py-3 w-full" onClick={() => authorizeUsdcPayment()}>
+              Auth
+            </button>
+          )}
+          {authorizationTxHash && (
+            <Link className="px-6 py-3 w-full flex justify-center" href={`${baseSepolia.blockExplorers.default.url}/tx/${authorizationTxHash}`} target="_blank">
+              View Auth ↗️
+            </Link>
+          )}
+          {authorizationTxHash && !captureTxHash && (
+            <button className="border rounded-md px-6 py-3 w-full" onClick={() => captureUsdcPayment()}>
+              Capture
+            </button>
+          )}
+          {captureTxHash && (
+            <Link className="px-6 py-3 w-full flex justify-center" href={`${baseSepolia.blockExplorers.default.url}/tx/${captureTxHash}`} target="_blank">
+              View Capture ↗️
+            </Link>
+          )}
+        </div>
       </div>
     </div>
   );

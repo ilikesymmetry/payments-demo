@@ -11,7 +11,8 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
   });
   const [spendPermission, setSpendPermission] = useState<SpendPermission>();
   const [signature, setSignature] = useState<Hex>();
-  const [authorized, setAuthorized] = useState<boolean>(false);
+  const [authorizationTxHash, setAuthorizationTxHash] = useState<Hex>();
+  const [captureTxHash, setCaptureTxHash] = useState<Hex>();
 
   async function requestUsdcPayment({
     usdAmount,
@@ -73,16 +74,16 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
         }
       ),
     });
-    if (res.status == 200) {
-      setAuthorized(true);
-    }
 
     console.log(res);
-    console.log(await res.json());
+    if (res.status == 200) {
+      const json = await res.json();
+      setAuthorizationTxHash(json.txHash);
+    }
   }
 
   async function captureUsdcPayment() {
-    if (!authorized) {
+    if (!authorizationTxHash) {
       console.error("Must be authorized to capture");
       return;
     }
@@ -103,13 +104,17 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
     });
 
     console.log(res);
-    console.log(await res.json());
+    if (res.status == 200) {
+      const json = await res.json();
+      setCaptureTxHash(json.txHash);
+    }
   }
 
   return {
     spendPermission,
     signature,
-    authorized,
+    authorizationTxHash,
+    captureTxHash,
     requestUsdcPayment,
     authorizeUsdcPayment,
     captureUsdcPayment,
