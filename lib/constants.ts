@@ -8,7 +8,7 @@ export const SPEND_PERMISSION_MANAGER =
 export const OPERATOR = "0x2B654aB28f82a2a4E4F6DB8e20791E5AcF4125c6" as Address;
 export const API_ACCOUNT =
   "0x9D782c3fBCd5217F27D6454C49861c5A63C9FDd2" as Address;
-export const MERCHANT = zeroAddress; // TODO fill in
+export const MERCHANT = "0x0BFc799dF7e440b7C88cC2454f12C58f8a29D986"; // dev wallet
 export const FEE_BPS = 100;
 export const FEE_RECIPIENT = OPERATOR;
 export const MAX_UINT48 = 281474976710655;

@@ -18,9 +18,9 @@ export async function POST(request: NextRequest) {
     const txHash = await operatorClient.sendTransaction({to: PAYMENT_ESCROW, data: encodeFunctionData({abi: PaymentEscrowAbi, functionName: "authorize", args: [spendPermission, value, signature]})})
     console.log({txHash})
     
-    return NextResponse.json({ message: 'Request received successfully', txHash }, { status: 200 });
+    return NextResponse.json({ txHash }, { status: 200 });
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    return NextResponse.json({ error: 'Something broke, message Conner' }, { status: 400 });
   }
 }

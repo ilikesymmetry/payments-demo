@@ -49,15 +49,15 @@ export async function POST(request: NextRequest) {
     const { spendPermission } = body;
 
     if (!spendPermission) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields: spendPermission' }, { status: 400 });
     }
 
     const signature = await signSpendPermission(spendPermission)
     console.log({signature})
     
-    return NextResponse.json({ message: 'Request received successfully', signature }, { status: 200 });
+    return NextResponse.json({ signature }, { status: 200 });
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Invalid request' }, { status: 400 });
+    return NextResponse.json({ error: 'Something broke, message Conner' }, { status: 400 });
   }
 }
