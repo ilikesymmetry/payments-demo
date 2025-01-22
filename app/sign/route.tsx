@@ -55,8 +55,8 @@ export async function POST(request: NextRequest) {
     console.log({signature})
     
     return NextResponse.json({ signature }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
-    return NextResponse.json({ error }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }

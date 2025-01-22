@@ -18,8 +18,8 @@ export async function POST(request: NextRequest) {
     console.log({txHash})
     
     return NextResponse.json({ txHash }, { status: 200 });
-  } catch (error) {
+  } catch (error: any) {
     console.error(error)
-    return NextResponse.json({ error: 'Something broke, message Conner' }, { status: 400 });
+    return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
