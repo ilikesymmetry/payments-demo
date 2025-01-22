@@ -1,28 +1,17 @@
 import { useState } from "react";
-import { Address, encodeAbiParameters, Hex, parseUnits } from "viem";
+import { Address, Hex, zeroAddress } from "viem";
 import { useConnect, useAccount, useSignTypedData, useChainId } from "wagmi";
-import { PAYMENT_ESCROW, SPEND_PERMISSION_MANAGER, USDC } from "./constants";
+import { prepareTypedData, prepareUsdcPayment, SpendPermission } from "./utils";
+import { API_ACCOUNT } from "./constants";
 
-export type SpendPermission = {
-  spender: Address;
-  token: Address;
-  allowance: bigint;
-  period: number;
-  start: number;
-  end: number;
-  salt: bigint;
-  extraData: Hex;
-};
-
-export function useBasePay(args?: {
-  paymentEscrowAddress?: Address;
-  usdcAddress?: Address;
-}) {
-  const paymentEscrowAddress = args?.paymentEscrowAddress ?? PAYMENT_ESCROW;
-  const usdcAddress = args?.usdcAddress ?? USDC;
-  const { signSpendPermission } = useSpendPermission();
+export function useBasePay(args?: { useApiAccount?: boolean }) {
+  const account = useAccount();
+  const { signSpendPermission } = useSpendPermission({
+    useApiAccount: args?.useApiAccount,
+  });
   const [spendPermission, setSpendPermission] = useState<SpendPermission>();
   const [signature, setSignature] = useState<Hex>();
+  const [authorized, setAuthorized] = useState<boolean>(false);
 
   async function requestUsdcPayment({
     usdAmount,
@@ -39,28 +28,26 @@ export function useBasePay(args?: {
     feeRecipient: Address;
     expiresAt: number; // unix milliseconds
   }) {
-    const res = await signSpendPermission({
-      spender: paymentEscrowAddress,
-      token: usdcAddress,
-      allowance: parseUnits(usdAmount.toString(), 6),
-      end: Math.floor(expiresAt / 1000), // unix seconds
-      extraData: encodeAbiParameters(
-        [
-          { name: "operator", type: "address" },
-          { name: "merchant", type: "address" },
-          { name: "feeBps", type: "uint16" },
-          { name: "feeRecipient", type: "address" },
-        ],
-        [operator, merchant, feeBps, feeRecipient]
-      ),
+    let spendPermission = prepareUsdcPayment({
+      account: account.address ?? zeroAddress,
+      usdAmount,
+      operator,
+      merchant,
+      feeBps,
+      feeRecipient,
+      expiresAt,
     });
-    console.log(res);
-    if (!res) {
+
+    if (args?.useApiAccount) {
+      spendPermission.account = API_ACCOUNT;
+    }
+    const signature = await signSpendPermission(spendPermission);
+    if (!signature) {
       console.warn("Spend Permission not signed");
       return;
     }
-    setSpendPermission(res.spendPermission);
-    setSignature(res.signature);
+    setSpendPermission(spendPermission);
+    setSignature(signature);
   }
 
   async function authorizeUsdcPayment() {
@@ -72,7 +59,7 @@ export function useBasePay(args?: {
       console.error("Must have valid signature to authorize");
       return;
     }
-    console.log("fetching");
+    console.log("authorizing");
 
     const res = await fetch("/authorize", {
       method: "POST",
@@ -86,6 +73,34 @@ export function useBasePay(args?: {
         }
       ),
     });
+    if (res.status == 200) {
+      setAuthorized(true);
+    }
+
+    console.log(res);
+    console.log(await res.json());
+  }
+
+  async function captureUsdcPayment() {
+    if (!authorized) {
+      console.error("Must be authorized to capture");
+      return;
+    }
+    if (!spendPermission) {
+      console.error("Must have valid spendPermission to authorize");
+      return;
+    }
+    console.log("capturing");
+
+    const res = await fetch("/capture", {
+      method: "POST",
+      body: JSON.stringify({ spendPermission }, (_: string, value: any) => {
+        if (typeof value === "bigint") {
+          return value.toString();
+        }
+        return value;
+      }),
+    });
 
     console.log(res);
     console.log(await res.json());
@@ -94,90 +109,58 @@ export function useBasePay(args?: {
   return {
     spendPermission,
     signature,
+    authorized,
     requestUsdcPayment,
     authorizeUsdcPayment,
+    captureUsdcPayment,
   };
 }
 
-function useSpendPermission() {
-  const maxUint48 = 281474976710655;
-  const spendPermissionManagerAddress = SPEND_PERMISSION_MANAGER;
-  const nonRepeatingPeriod = 281474976672000; // max uint48, period does not repeat
-
+function useSpendPermission({ useApiAccount }: { useApiAccount?: boolean }) {
   const { connectors, connectAsync } = useConnect();
   const account = useAccount();
   const chainId = useChainId();
   const { signTypedDataAsync } = useSignTypedData();
 
-  async function signSpendPermission({
-    spender,
-    token,
-    allowance,
-    period,
-    start,
-    end,
-    salt,
-    extraData,
-  }: {
-    spender: Address;
-    token: Address;
-    allowance: bigint;
-    period?: number;
-    start?: number;
-    end?: number;
-    salt?: bigint;
-    extraData?: Hex;
-  }) {
-    // setIsDisabled(true);
+  async function signSpendPermission(spendPermission: SpendPermission) {
+    console.log({ spendPermission });
+    console.log("signing");
+
+    if (useApiAccount) {
+      const res = await fetch("/sign", {
+        method: "POST",
+        body: JSON.stringify({ spendPermission }, (_: string, value: any) => {
+          if (typeof value === "bigint") {
+            return value.toString();
+          }
+          return value;
+        }),
+      });
+      const json = await res.json();
+      return json.signature;
+    }
+
     let accountAddress = account?.address;
     if (!accountAddress) {
+      if (spendPermission.account !== zeroAddress) {
+        console.error("Address is not connected");
+        return undefined;
+      }
       try {
         const requestAccounts = await connectAsync({
           connector: connectors[0],
         });
         accountAddress = requestAccounts.accounts[0];
+        spendPermission = { ...spendPermission, account: accountAddress };
       } catch {
         return;
       }
     }
-
-    const spendPermission = {
-      account: accountAddress,
-      spender,
-      token,
-      allowance,
-      period: period ?? nonRepeatingPeriod,
-      start: start ?? Math.ceil(Date.now() / 1000),
-      end: end ?? maxUint48,
-      salt: salt ?? BigInt(0),
-      extraData: extraData ?? "0x",
-    };
-
     try {
-      const signature = await signTypedDataAsync({
-        domain: {
-          name: "Spend Permission Manager",
-          version: "1",
-          chainId: chainId,
-          verifyingContract: spendPermissionManagerAddress,
-        },
-        types: {
-          SpendPermission: [
-            { name: "account", type: "address" },
-            { name: "spender", type: "address" },
-            { name: "token", type: "address" },
-            { name: "allowance", type: "uint160" },
-            { name: "period", type: "uint48" },
-            { name: "start", type: "uint48" },
-            { name: "end", type: "uint48" },
-            { name: "salt", type: "uint256" },
-            { name: "extraData", type: "bytes" },
-          ],
-        },
-        primaryType: "SpendPermission",
-        message: spendPermission,
-      });
-      return { spendPermission, signature };
+      const signature = await signTypedDataAsync(
+        prepareTypedData({ chainId, spendPermission })
+      );
+      return signature;
     } catch (e) {
       console.error(e);
     }

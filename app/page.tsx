@@ -4,11 +4,12 @@ import { useBasePay } from "../lib/hooks";
 import { FEE_BPS, FEE_RECIPIENT, MERCHANT, OPERATOR } from "@/lib/constants";
 
 export default function App() {
-  const merchant = MERCHANT // TODO fill in
+  // TODO fill in
+  const merchant = MERCHANT
   const feeBps = FEE_BPS
   const feeRecipient = FEE_RECIPIENT
 
-  const {spendPermission, signature, requestUsdcPayment, authorizeUsdcPayment} = useBasePay()
+  const {spendPermission, signature, authorized, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -29,11 +30,17 @@ export default function App() {
           </svg>
           <p>Base Pay</p>
         </button>
-        {spendPermission && signature && (
+        {spendPermission && signature && !authorized && (
           <button 
             className="border rounded-md px-6 py-3.5"
             onClick={() => authorizeUsdcPayment()}
           >Auth</button>
+        )}
+        {spendPermission && signature && authorized && (
+          <button 
+            className="border rounded-md px-6 py-3.5"
+            onClick={() => captureUsdcPayment()}
+          >Capture</button>
         )}
       </div>
     </div>
