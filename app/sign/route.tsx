@@ -31,8 +31,7 @@ async function signSpendPermission(spendPermission: SpendPermission) {
   });
 
   if (spendPermission.account !== account.address) {
-    console.error("SpendPermission account does not match: " + account.address);
-    return null;
+    throw Error("SpendPermission account does not match: " + account.address);
   }
 
   const signature = await account.signTypedData(
