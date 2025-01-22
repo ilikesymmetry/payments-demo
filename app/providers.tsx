@@ -39,7 +39,6 @@ export function Providers(props: {
       <QueryClientProvider client={queryClient}>
         <OnchainKitProvider
           apiKey={process.env.NEXT_PUBLIC_ONCHAINKIT_API_KEY}
-          // @ts-ignore
           chain={base}
           config={{
             appearance: {

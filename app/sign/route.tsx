@@ -1,7 +1,7 @@
 import { SPEND_PERMISSION_MANAGER } from '@/lib/constants';
 import { prepareTypedData, SpendPermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
-import { Address, createPublicClient, encodeFunctionData, Hex, http, LocalAccount } from 'viem';
+import { Address, createPublicClient, Hex, http, LocalAccount } from 'viem';
 import { toCoinbaseSmartAccount } from 'viem/account-abstraction';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
