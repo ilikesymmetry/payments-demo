@@ -1,15 +1,28 @@
+import { useState } from "react";
 import { Address, encodeAbiParameters, Hex, parseUnits } from "viem";
 import { useConnect, useAccount, useSignTypedData, useChainId } from "wagmi";
+import { PAYMENT_ESCROW, SPEND_PERMISSION_MANAGER, USDC } from "./constants";
+
+export type SpendPermission = {
+  spender: Address;
+  token: Address;
+  allowance: bigint;
+  period: number;
+  start: number;
+  end: number;
+  salt: bigint;
+  extraData: Hex;
+};
 
 export function useBasePay(args?: {
   paymentEscrowAddress?: Address;
   usdcAddress?: Address;
 }) {
-  const paymentEscrowAddress =
-    args?.paymentEscrowAddress ?? "0x1901D7DFb5614F85D805C3adb987dB566B1d40Ed";
-  const usdcAddress =
-    args?.usdcAddress ?? "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+  const paymentEscrowAddress = args?.paymentEscrowAddress ?? PAYMENT_ESCROW;
+  const usdcAddress = args?.usdcAddress ?? USDC;
   const { signSpendPermission } = useSpendPermission();
+  const [spendPermission, setSpendPermission] = useState<SpendPermission>();
+  const [signature, setSignature] = useState<Hex>();
 
   async function requestUsdcPayment({
     usdAmount,
@@ -42,16 +55,53 @@ export function useBasePay(args?: {
       ),
     });
     console.log(res);
-    return res;
+    if (!res) {
+      console.warn("Spend Permission not signed");
+      return;
+    }
+    setSpendPermission(res.spendPermission);
+    setSignature(res.signature);
   }
 
-  return { requestUsdcPayment };
+  async function authorizeUsdcPayment() {
+    if (!spendPermission) {
+      console.error("Must have valid spendPermission to authorize");
+      return;
+    }
+    if (!signature) {
+      console.error("Must have valid signature to authorize");
+      return;
+    }
+    console.log("fetching");
+
+    const res = await fetch("/authorize", {
+      method: "POST",
+      body: JSON.stringify(
+        { spendPermission, signature },
+        (_: string, value: any) => {
+          if (typeof value === "bigint") {
+            return value.toString();
+          }
+          return value;
+        }
+      ),
+    });
+
+    console.log(res);
+    console.log(await res.json());
+  }
+
+  return {
+    spendPermission,
+    signature,
+    requestUsdcPayment,
+    authorizeUsdcPayment,
+  };
 }
 
 function useSpendPermission() {
   const maxUint48 = 281474976710655;
-  const spendPermissionManagerAddress =
-    "0xf85210B21cC50302F477BA56686d2019dC9b67Ad" as Address;
+  const spendPermissionManagerAddress = SPEND_PERMISSION_MANAGER;
   const nonRepeatingPeriod = 281474976672000; // max uint48, period does not repeat
 
   const { connectors, connectAsync } = useConnect();
