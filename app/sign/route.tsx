@@ -57,6 +57,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ signature }, { status: 200 });
   } catch (error) {
     console.error(error)
-    return NextResponse.json({ error: 'Something broke, message Conner' }, { status: 400 });
+    return NextResponse.json({ error }, { status: 400 });
   }
 }
