@@ -1,22 +1,10 @@
 import { SPEND_PERMISSION_MANAGER } from '@/lib/constants';
 import { prepareTypedData, SpendPermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
-import { Address, createPublicClient, Hex, http, LocalAccount } from 'viem';
+import { createPublicClient, Hex, http } from 'viem';
 import { toCoinbaseSmartAccount } from 'viem/account-abstraction';
 import { privateKeyToAccount } from 'viem/accounts';
 import { baseSepolia } from 'viem/chains';
-
-function addressToFakeAccount(address: Address): LocalAccount {
-    return {
-        address,
-        signMessage: async ({ message }) => "0x",
-        signTransaction: async (transaction, options) => "0x",
-        signTypedData: async (parameters) => "0x",
-        publicKey: address,
-        source: "local",
-        type: "local"
-    }
-}
 
 async function signSpendPermission(spendPermission: SpendPermission) {
   const chain = baseSepolia;
@@ -27,7 +15,7 @@ async function signSpendPermission(spendPermission: SpendPermission) {
   const owner = privateKeyToAccount(process.env.OWNER_PRIVATE_KEY as Hex);
   const account = await toCoinbaseSmartAccount({
     client,
-    owners: [owner, addressToFakeAccount(SPEND_PERMISSION_MANAGER)],
+    owners: [owner, SPEND_PERMISSION_MANAGER],
   });
 
   if (spendPermission.account !== account.address) {
