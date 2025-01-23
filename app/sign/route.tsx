@@ -54,9 +54,29 @@ export async function POST(request: NextRequest) {
     const signature = await signSpendPermission(spendPermission)
     console.log({signature})
     
-    return NextResponse.json({ signature }, { status: 200 });
+    const origin = request.headers.get('origin');
+    return NextResponse.json({ signature }, { status: 200, headers: {'Access-Control-Allow-Origin': origin as string}});
   } catch (error: any) {
     console.error(error)
     return NextResponse.json({ error: error.message }, { status: 400 });
   }
 }
+
+export async function OPTIONS(req: Request) {
+    const origin = req.headers.get('origin');
+    const allowedDomainPattern = /^https?:\/\/([a-zA-Z0-9-]+\.)?spin\.dev$/;
+  
+    if (origin && allowedDomainPattern.test(origin)) {
+      return NextResponse.json({}, {
+        status: 200,
+        headers: {
+          'Access-Control-Allow-Origin': origin,
+          'Access-Control-Allow-Methods': 'GET,OPTIONS,PATCH,DELETE,POST,PUT',
+          'Access-Control-Allow-Headers': 'X-CSRF-Token, X-Requested-With, Authorization, Content-Type, Accept',
+          'Access-Control-Allow-Credentials': 'true',
+        },
+      });
+    }
+  
+    return NextResponse.json({ error: 'Not allowed' }, { status: 403 });
+  }
