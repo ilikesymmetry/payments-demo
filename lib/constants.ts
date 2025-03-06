@@ -1,7 +1,9 @@
 import { Address, zeroAddress } from "viem";
 
 export const PAYMENT_ESCROW =
-  "0x1901D7DFb5614F85D805C3adb987dB566B1d40Ed" as Address;
+  "0x96068294183115738323E8D66A50d4c0DDbeB70F" as Address;
+// export const PAYMENT_ESCROW =
+//   "0x1901D7DFb5614F85D805C3adb987dB566B1d40Ed" as Address;
 export const USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e" as Address;
 export const SPEND_PERMISSION_MANAGER =
   "0xf85210B21cC50302F477BA56686d2019dC9b67Ad" as Address;

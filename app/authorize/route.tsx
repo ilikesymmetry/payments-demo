@@ -7,15 +7,15 @@ import { encodeFunctionData } from 'viem';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { spendPermission, signature } = body;
+    const { authorization, paymentDetails, signature } = body;
     console.log(body)
 
-    if (!spendPermission || !signature) {
+    if (!authorization || !paymentDetails || !signature) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    const value = body?.value ?? spendPermission.allowance
-    const txHash = await operatorClient.sendTransaction({to: PAYMENT_ESCROW, data: encodeFunctionData({abi: PaymentEscrowAbi, functionName: "authorize", args: [spendPermission, value, signature]})})
+    const value = body?.value ?? authorization.value
+    const txHash = await operatorClient.sendTransaction({to: PAYMENT_ESCROW, data: encodeFunctionData({abi: PaymentEscrowAbi, functionName: "authorize", args: [value, paymentDetails, signature]})})
     console.log({txHash})
     
     return NextResponse.json({ txHash }, { status: 200 });

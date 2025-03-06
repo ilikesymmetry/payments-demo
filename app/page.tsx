@@ -11,7 +11,7 @@ export default function App() {
   const feeBps = FEE_BPS
   const feeRecipient = FEE_RECIPIENT
 
-  const {spendPermission, signature, authorizationTxHash, captureTxHash, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
+  const {authorization, signature, authorizationTxHash, captureTxHash, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -33,7 +33,7 @@ export default function App() {
           <p>Base Pay</p>
         </button>
         <div className="absolute top-12 w-full flex flex-col space-y-4">
-          {spendPermission && signature && !authorizationTxHash && (
+          {authorization && signature && !authorizationTxHash && (
             <button className="border rounded-md px-6 py-3 w-full" onClick={() => authorizeUsdcPayment()}>
               Auth
             </button>

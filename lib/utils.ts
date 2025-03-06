@@ -1,4 +1,4 @@
-import { Address, encodeAbiParameters, Hex, parseUnits } from "viem";
+import { Address, encodeAbiParameters, Hex, keccak256, parseUnits } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { http, createPublicClient } from "viem";
 import { baseSepolia } from "viem/chains";
@@ -11,16 +11,13 @@ import {
   USDC,
 } from "./constants";
 
-export type SpendPermission = {
-  account: Address;
-  spender: Address;
-  token: Address;
-  allowance: bigint;
-  period: number;
-  start: number;
-  end: number;
-  salt: bigint;
-  extraData: Hex;
+export type Authorization = {
+  from: Address;
+  to: Address;
+  value: bigint;
+  validAfter: number;
+  validBefore: number;
+  nonce: Hex;
 };
 
 export function prepareUsdcPayment({
@@ -40,93 +37,107 @@ export function prepareUsdcPayment({
   feeRecipient: Address;
   expiresAt: number; // unix milliseconds
 }) {
-  const extraData = encodeAbiParameters(
+  const value = parseUnits(usdAmount.toString(), 6);
+  const validAfter = 0;
+  const salt = BigInt(Math.ceil(Math.random() * 1000));
+  const paymentDetails = encodeAbiParameters(
     [
+      { name: "token", type: "address" },
+      { name: "buyer", type: "address" },
+      { name: "value", type: "uint256" },
+      { name: "validAfter", type: "uint256" },
+      { name: "validBefore", type: "uint256" },
+      { name: "captureDeadline", type: "uint48" },
       { name: "operator", type: "address" },
-      { name: "merchant", type: "address" },
+      { name: "captureAddress", type: "address" },
       { name: "feeBps", type: "uint16" },
       { name: "feeRecipient", type: "address" },
+      { name: "salt", type: "uint256" },
     ],
-    [operator, merchant, feeBps, feeRecipient]
+    [
+      USDC,
+      account,
+      value,
+      BigInt(validAfter),
+      BigInt(expiresAt),
+      MAX_UINT48,
+      operator,
+      merchant,
+      feeBps,
+      feeRecipient,
+      salt,
+    ]
   );
+  const paymentDetailsHash = keccak256(paymentDetails);
 
-  return prepareSpendPermission({
-    account,
-    spender: PAYMENT_ESCROW,
-    token: USDC,
-    allowance: parseUnits(usdAmount.toString(), 6),
-    end: expiresAt,
-    extraData,
-  });
+  return {
+    paymentDetails,
+    authorization: prepareAuthorization({
+      from: account,
+      to: PAYMENT_ESCROW,
+      value,
+      validAfter,
+      validBefore: expiresAt,
+      nonce: paymentDetailsHash,
+    }),
+  };
 }
 
-export function prepareSpendPermission({
-  account,
-  spender,
-  token,
-  allowance,
-  period,
-  start,
-  end,
-  salt,
-  extraData,
+export function prepareAuthorization({
+  from,
+  to,
+  value,
+  validAfter,
+  validBefore,
+  nonce,
 }: {
-  account: Address;
-  spender: Address;
-  token: Address;
-  allowance: bigint;
-  period?: number;
-  start?: number;
-  end?: number;
-  salt?: bigint;
-  extraData?: Hex;
+  from: Address;
+  to: Address;
+  value: bigint;
+  validAfter?: number;
+  validBefore?: number;
+  nonce: Hex;
 }) {
   return {
-    account,
-    spender,
-    token,
-    allowance,
-    period: period ?? NON_REPEATING_PERIOD,
-    start: start ?? Math.ceil(Date.now() / 1000),
-    end: end ?? MAX_UINT48,
-    salt: salt ?? BigInt(0),
-    extraData: extraData ?? "0x",
+    from,
+    to,
+    value,
+    validAfter: validAfter ?? Math.ceil(Date.now() / 1000),
+    validBefore: validBefore ?? MAX_UINT48,
+    nonce,
   };
 }
 
 export function prepareTypedData({
   chainId,
-  spendPermission,
+  authorization,
 }: {
   chainId: number;
-  spendPermission: SpendPermission;
+  authorization: Authorization;
 }) {
   return {
     domain: {
-      name: "Spend Permission Manager",
-      version: "1",
+      name: "USDC",
+      version: "2",
       chainId,
-      verifyingContract: SPEND_PERMISSION_MANAGER,
+      verifyingContract: USDC,
     },
     types: {
-      SpendPermission: [
-        { name: "account", type: "address" },
-        { name: "spender", type: "address" },
-        { name: "token", type: "address" },
-        { name: "allowance", type: "uint160" },
-        { name: "period", type: "uint48" },
-        { name: "start", type: "uint48" },
-        { name: "end", type: "uint48" },
-        { name: "salt", type: "uint256" },
-        { name: "extraData", type: "bytes" },
+      ReceiveWithAuthorization: [
+        { name: "from", type: "address" },
+        { name: "to", type: "address" },
+        { name: "value", type: "uint256" },
+        { name: "validAfter", type: "uint256" },
+        { name: "validBefore", type: "uint256" },
+        { name: "nonce", type: "bytes32" },
       ],
     },
-    primaryType: "SpendPermission",
-    message: spendPermission,
+    primaryType: "ReceiveWithAuthorization",
+    message: authorization,
   } as any;
 }
 
-export async function signSpendPermission(spendPermission: SpendPermission) {
+export async function signAuthorization(authorization: Authorization) {
   const chain = baseSepolia;
   const client = createPublicClient({
     chain,
@@ -138,13 +149,13 @@ export async function signSpendPermission(spendPermission: SpendPermission) {
     owners: [owner],
   });
 
-  if (spendPermission.account !== account.address) {
-    console.error("Cannot sign for SpendPermission account");
+  if (authorization.from !== account.address) {
+    console.error("Cannot sign for Authorization from");
     return null;
   }
 
   const signature = await account.signTypedData(
-    prepareTypedData({ chainId: chain.id, spendPermission })
+    prepareTypedData({ chainId: chain.id, authorization })
   );
 
   return signature;
