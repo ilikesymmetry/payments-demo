@@ -28,7 +28,7 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
     merchant: Address;
     feeBps: number;
     feeRecipient: Address;
-    expiresAt: number; // unix milliseconds
+    expiresAt: number; // unix seconds
   }) {
     let { authorization, paymentDetails } = prepareUsdcPayment({
       account: account.address ?? zeroAddress,

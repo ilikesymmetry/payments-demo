@@ -1,5 +1,5 @@
 import { SPEND_PERMISSION_MANAGER } from '@/lib/constants';
-import { prepareTypedData, SpendPermission } from '@/lib/utils';
+import { prepareTypedData, SpendPermission } from '@/lib/utils-spend-limits';
 import { NextRequest, NextResponse } from 'next/server';
 import { Address, createPublicClient, Hex, http, LocalAccount } from 'viem';
 import { toCoinbaseSmartAccount } from 'viem/account-abstraction';

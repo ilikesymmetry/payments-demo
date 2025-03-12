@@ -35,7 +35,7 @@ export function prepareUsdcPayment({
   merchant: Address;
   feeBps: number;
   feeRecipient: Address;
-  expiresAt: number; // unix milliseconds
+  expiresAt: number; // unix seconds
 }) {
   const value = parseUnits(usdAmount.toString(), 6);
   const validAfter = 0;

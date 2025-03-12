@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Address, Hex, zeroAddress } from "viem";
 import { useConnect, useAccount, useSignTypedData, useChainId } from "wagmi";
-import { prepareTypedData, prepareUsdcPayment, SpendPermission } from "./utils";
+import {
+  prepareTypedData,
+  prepareUsdcPayment,
+  SpendPermission,
+} from "./utils-spend-limits";
 import { API_ACCOUNT } from "./constants";
 
 export function useBasePay(args?: { useApiAccount?: boolean }) {
@@ -27,7 +31,7 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
     merchant: Address;
     feeBps: number;
     feeRecipient: Address;
-    expiresAt: number; // unix milliseconds
+    expiresAt: number; // unix seconds
   }) {
     let spendPermission = prepareUsdcPayment({
       account: account.address ?? zeroAddress,

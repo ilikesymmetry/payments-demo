@@ -24,7 +24,7 @@ export default function App() {
             merchant, 
             feeBps, 
             feeRecipient, 
-            expiresAt: Date.now() + 10 * 60 * 1000
+            expiresAt: Math.ceil(Date.now() / 1000) + 60 * 60 * 24 * 365
           })
         }>
           <svg width="18" height="17" viewBox="0 0 18 17" fill="none" xmlns="http://www.w3.org/2000/svg">
