@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Address, Hex, zeroAddress } from "viem";
+import { Address, decodeAbiParameters, Hex, zeroAddress } from "viem";
 import { useConnect, useAccount, useSignTypedData, useChainId } from "wagmi";
 import { prepareTypedData, prepareUsdcPayment, Authorization } from "./utils";
 import { API_ACCOUNT } from "./constants";

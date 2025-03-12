@@ -16,6 +16,7 @@ const config = createConfig({
         preference: {
           options: "smartWalletOnly",
           keysUrl: "https://keys-dev.coinbase.com/connect",
+          // keysUrl: "http://localhost:3005/connect",
         }
       }),
   ],

@@ -69,7 +69,22 @@ export function prepareUsdcPayment({
     ]
   );
   const paymentDetailsHash = keccak256(paymentDetails);
-  console.log({ paymentDetails });
+  console.log({
+    paymentDetails,
+    paymentDetailsFields: {
+      token: USDC,
+      buyer: account,
+      value: value,
+      validAfter,
+      validBefore: expiresAt,
+      captureDeadline: MAX_UINT48,
+      operator,
+      captureAddress: merchant,
+      feeBps,
+      feeRecipient,
+      salt,
+    },
+  });
 
   return {
     paymentDetails,
