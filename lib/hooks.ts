@@ -48,6 +48,7 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
       console.warn("Spend Permission not signed");
       return;
     }
+    console.log({ signature });
     setAuthorization(authorization);
     setPaymentDetails(paymentDetails);
     setSignature(signature);
@@ -168,9 +169,9 @@ function useSignPayment({ useApiAccount }: { useApiAccount?: boolean }) {
       }
     }
     try {
-      const signature = await signTypedDataAsync(
-        prepareTypedData({ chainId, authorization })
-      );
+      const typedData = prepareTypedData({ chainId, authorization });
+      console.log({ typedData });
+      const signature = await signTypedDataAsync(typedData);
       return signature;
     } catch (e) {
       console.error(e);

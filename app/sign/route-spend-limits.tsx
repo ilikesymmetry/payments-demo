@@ -1,5 +1,5 @@
 import { SPEND_PERMISSION_MANAGER } from '@/lib/constants';
-import { prepareTypedData, Authorization } from '@/lib/utils';
+import { prepareTypedData, SpendPermission } from '@/lib/utils';
 import { NextRequest, NextResponse } from 'next/server';
 import { Address, createPublicClient, Hex, http, LocalAccount } from 'viem';
 import { toCoinbaseSmartAccount } from 'viem/account-abstraction';
@@ -18,7 +18,7 @@ function addressToFakeAccount(address: Address): LocalAccount {
     }
 }
 
-async function signAuthorization(authorization: Authorization) {
+async function signSpendPermission(spendPermission: SpendPermission) {
   const chain = baseSepolia;
   const client = createPublicClient({
     chain,
@@ -30,12 +30,12 @@ async function signAuthorization(authorization: Authorization) {
     owners: [owner, addressToFakeAccount(SPEND_PERMISSION_MANAGER)],
   });
 
-  if (authorization.from !== account.address) {
-    throw Error("Authorization account does not match: " + account.address);
+  if (spendPermission.account !== account.address) {
+    throw Error("SpendPermission account does not match: " + account.address);
   }
 
   const signature = await account.signTypedData(
-    prepareTypedData({ chainId: chain.id, authorization })
+    prepareTypedData({ chainId: chain.id, spendPermission })
   );
 
   return signature;
@@ -45,13 +45,13 @@ async function signAuthorization(authorization: Authorization) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { authorization } = body;
+    const { spendPermission } = body;
 
-    if (!authorization) {
-      return NextResponse.json({ error: 'Missing required fields: authorization' }, { status: 400 });
+    if (!spendPermission) {
+      return NextResponse.json({ error: 'Missing required fields: spendPermission' }, { status: 400 });
     }
 
-    const signature = await signAuthorization(authorization)
+    const signature = await signSpendPermission(spendPermission)
     console.log({signature})
     
     const origin = request.headers.get('origin');

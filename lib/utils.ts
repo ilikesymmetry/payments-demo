@@ -69,6 +69,7 @@ export function prepareUsdcPayment({
     ]
   );
   const paymentDetailsHash = keccak256(paymentDetails);
+  console.log({ paymentDetails });
 
   return {
     paymentDetails,
@@ -148,6 +149,8 @@ export async function signAuthorization(authorization: Authorization) {
     client,
     owners: [owner],
   });
+
+  console.log("account.address", account.address);
 
   if (authorization.from !== account.address) {
     console.error("Cannot sign for Authorization from");
