@@ -1,16 +1,19 @@
 import { useState } from "react";
 import { Address, Hex, zeroAddress } from "viem";
 import { useConnect, useAccount, useSignTypedData, useChainId } from "wagmi";
-import { prepareTypedData, prepareUsdcPayment, Authorization } from "./utils";
+import {
+  prepareTypedData,
+  prepareUsdcPayment,
+  SpendPermission,
+} from "./utils-spend-limits";
 import { API_ACCOUNT } from "./constants";
 
 export function useBasePay(args?: { useApiAccount?: boolean }) {
   const account = useAccount();
-  const { signPayment } = useSignPayment({
+  const { signSpendPermission } = useSpendPermission({
     useApiAccount: args?.useApiAccount,
   });
-  const [authorization, setAuthorization] = useState<Authorization>();
-  const [paymentDetails, setPaymentDetails] = useState<Hex>();
+  const [spendPermission, setSpendPermission] = useState<SpendPermission>();
   const [signature, setSignature] = useState<Hex>();
   const [authorizationTxHash, setAuthorizationTxHash] = useState<Hex>();
   const [captureTxHash, setCaptureTxHash] = useState<Hex>();
@@ -30,7 +33,7 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
     feeRecipient: Address;
     expiresAt: number; // unix seconds
   }) {
-    let { authorization, paymentDetails } = prepareUsdcPayment({
+    let spendPermission = prepareUsdcPayment({
       account: account.address ?? zeroAddress,
       usdAmount,
       operator,
@@ -41,22 +44,20 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
     });
 
     if (args?.useApiAccount) {
-      authorization.from = API_ACCOUNT;
+      spendPermission.account = API_ACCOUNT;
     }
-    const signature = await signPayment(authorization);
+    const signature = await signSpendPermission(spendPermission);
     if (!signature) {
       console.warn("Spend Permission not signed");
       return;
     }
-    console.log({ signature });
-    setAuthorization(authorization);
-    setPaymentDetails(paymentDetails);
+    setSpendPermission(spendPermission);
     setSignature(signature);
   }
 
   async function authorizeUsdcPayment() {
-    if (!authorization) {
-      console.error("Must have valid authorization to authorize");
+    if (!spendPermission) {
+      console.error("Must have valid spendPermission to authorize");
       return;
     }
     if (!signature) {
@@ -68,7 +69,7 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
     const res = await fetch("/authorize", {
       method: "POST",
       body: JSON.stringify(
-        { authorization, paymentDetails, signature },
+        { spendPermission, signature },
         (_: string, value: any) => {
           if (typeof value === "bigint") {
             return value.toString();
@@ -90,23 +91,20 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
       console.error("Must be authorized to capture");
       return;
     }
-    if (!authorization) {
-      console.error("Must have valid authorization to authorize");
+    if (!spendPermission) {
+      console.error("Must have valid spendPermission to authorize");
       return;
     }
     console.log("capturing");
 
     const res = await fetch("/capture", {
       method: "POST",
-      body: JSON.stringify(
-        { authorization, paymentDetails },
-        (_: string, value: any) => {
-          if (typeof value === "bigint") {
-            return value.toString();
-          }
-          return value;
+      body: JSON.stringify({ spendPermission }, (_: string, value: any) => {
+        if (typeof value === "bigint") {
+          return value.toString();
         }
-      ),
+        return value;
+      }),
     });
 
     console.log(res);
@@ -117,8 +115,7 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
   }
 
   return {
-    authorization,
-    paymentDetails,
+    spendPermission,
     signature,
     authorizationTxHash,
     captureTxHash,
@@ -128,20 +125,20 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
   };
 }
 
-function useSignPayment({ useApiAccount }: { useApiAccount?: boolean }) {
+function useSpendPermission({ useApiAccount }: { useApiAccount?: boolean }) {
   const { connectors, connectAsync } = useConnect();
   const account = useAccount();
   const chainId = useChainId();
   const { signTypedDataAsync } = useSignTypedData();
 
-  async function signPayment(authorization: Authorization) {
-    console.log({ authorization });
+  async function signSpendPermission(spendPermission: SpendPermission) {
+    console.log({ spendPermission });
     console.log("signing");
 
     if (useApiAccount) {
       const res = await fetch("/sign", {
         method: "POST",
-        body: JSON.stringify({ authorization }, (_: string, value: any) => {
+        body: JSON.stringify({ spendPermission }, (_: string, value: any) => {
           if (typeof value === "bigint") {
             return value.toString();
           }
@@ -154,7 +151,7 @@ function useSignPayment({ useApiAccount }: { useApiAccount?: boolean }) {
 
     let accountAddress = account?.address;
     if (!accountAddress) {
-      if (authorization.from !== zeroAddress) {
+      if (spendPermission.account !== zeroAddress) {
         console.error("Address is not connected");
         return undefined;
       }
@@ -163,20 +160,20 @@ function useSignPayment({ useApiAccount }: { useApiAccount?: boolean }) {
           connector: connectors[0],
         });
         accountAddress = requestAccounts.accounts[0];
-        authorization = { ...authorization, from: accountAddress };
+        spendPermission = { ...spendPermission, account: accountAddress };
       } catch {
         return;
       }
     }
     try {
-      const typedData = prepareTypedData({ chainId, authorization });
-      console.log({ typedData });
-      const signature = await signTypedDataAsync(typedData);
+      const signature = await signTypedDataAsync(
+        prepareTypedData({ chainId, spendPermission })
+      );
       return signature;
     } catch (e) {
       console.error(e);
     }
   }
 
-  return { signPayment };
+  return { signSpendPermission };
 }

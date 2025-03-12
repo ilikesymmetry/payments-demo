@@ -11,7 +11,7 @@ export default function App() {
   const feeBps = FEE_BPS
   const feeRecipient = FEE_RECIPIENT
 
-  const {spendPermission, signature, authorizationTxHash, captureTxHash, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
+  const {authorization, signature, authorizationTxHash, captureTxHash, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
 
   return (
     <div className="flex items-center justify-center h-screen">
@@ -24,7 +24,7 @@ export default function App() {
             merchant, 
             feeBps, 
             feeRecipient, 
-            expiresAt: Date.now() + 10 * 60 * 1000
+            expiresAt: Math.ceil(Date.now() / 1000) + 60 * 60 * 24 * 365
           })
         }>
           <svg width="18" height="17" viewBox="0 0 18 17" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -33,7 +33,7 @@ export default function App() {
           <p>Base Pay</p>
         </button>
         <div className="absolute top-12 w-full flex flex-col space-y-4">
-          {spendPermission && signature && !authorizationTxHash && (
+          {authorization && signature && !authorizationTxHash && (
             <button className="border rounded-md px-6 py-3 w-full" onClick={() => authorizeUsdcPayment()}>
               Auth
             </button>
