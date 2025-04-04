@@ -1,11 +1,20 @@
-import { Address, encodeAbiParameters, Hex, keccak256, parseUnits } from "viem";
+import {
+  Address,
+  concat,
+  encodeAbiParameters,
+  Hex,
+  keccak256,
+  parseUnits,
+} from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { http, createPublicClient } from "viem";
 import { baseSepolia } from "viem/chains";
 import { toCoinbaseSmartAccount } from "viem/account-abstraction";
 import {
+  ERC3009_TOKEN_COLLECTOR,
   MAX_UINT48,
   NON_REPEATING_PERIOD,
+  PAYMENT_DETAILS_TYPEHASH,
   PAYMENT_ESCROW,
   SPEND_PERMISSION_MANAGER,
   USDC,
@@ -21,67 +30,109 @@ export type Authorization = {
 };
 
 export function prepareUsdcPayment({
+  chainId,
   account,
   usdAmount,
   operator,
-  merchant,
+  receiver,
   feeBps,
-  feeRecipient,
+  feeReceiver,
   expiresAt,
 }: {
+  chainId: number;
   account: Address;
   usdAmount: number;
   operator: Address;
-  merchant: Address;
+  receiver: Address;
   feeBps: number;
-  feeRecipient: Address;
+  feeReceiver: Address;
   expiresAt: number; // unix seconds
 }) {
+  console.log({
+    chainId,
+    account,
+    usdAmount,
+    operator,
+    receiver,
+    feeBps,
+    feeReceiver,
+    expiresAt,
+  });
   const value = parseUnits(usdAmount.toString(), 6);
-  const validAfter = 0;
   const salt = BigInt(Math.ceil(Math.random() * 1000));
-  const paymentDetails = encodeAbiParameters(
+  const paymentDetails = {
+    operator,
+    payer: account,
+    receiver,
+    token: USDC,
+    maxAmount: value,
+    preApprovalExpiry: expiresAt,
+    authorizationExpiry: MAX_UINT48,
+    refundExpiry: MAX_UINT48,
+    minFeeBps: feeBps,
+    maxFeeBps: feeBps,
+    feeReceiver,
+    salt,
+  };
+  const encodedPaymentDetails = encodeAbiParameters(
     [
-      { name: "token", type: "address" },
-      { name: "buyer", type: "address" },
-      { name: "value", type: "uint256" },
-      { name: "validAfter", type: "uint256" },
-      { name: "validBefore", type: "uint256" },
-      { name: "captureDeadline", type: "uint48" },
       { name: "operator", type: "address" },
-      { name: "captureAddress", type: "address" },
-      { name: "feeBps", type: "uint16" },
-      { name: "feeRecipient", type: "address" },
+      { name: "payer", type: "address" },
+      { name: "receiver", type: "address" },
+      { name: "token", type: "address" },
+      { name: "maxAmount", type: "uint256" },
+      { name: "preApprovalExpiry", type: "uint48" },
+      { name: "authorizationExpiry", type: "uint48" },
+      { name: "refundExpiry", type: "uint48" },
+      { name: "minFeeBps", type: "uint16" },
+      { name: "maxFeeBps", type: "uint16" },
+      { name: "feeReceiver", type: "address" },
       { name: "salt", type: "uint256" },
     ],
     [
-      USDC,
-      account,
-      value,
-      BigInt(validAfter),
-      BigInt(expiresAt),
-      MAX_UINT48,
       operator,
-      merchant,
+      account,
+      receiver,
+      USDC,
+      value,
+      expiresAt,
+      MAX_UINT48,
+      MAX_UINT48,
       feeBps,
-      feeRecipient,
+      feeBps,
+      feeReceiver,
       salt,
     ]
   );
-  const paymentDetailsHash = keccak256(paymentDetails);
+  const paymentDetailsPreImage = concat([
+    PAYMENT_DETAILS_TYPEHASH,
+    encodedPaymentDetails,
+  ]);
+  const structHash = keccak256(paymentDetailsPreImage);
+  const paymentDetailsHash = keccak256(
+    encodeAbiParameters(
+      [
+        { name: "chainId", type: "uint256" },
+        { name: "verifyingContract", type: "address" },
+        { name: "structHash", type: "bytes32" },
+      ],
+      [BigInt(chainId), PAYMENT_ESCROW, structHash]
+    )
+  );
   console.log({
-    paymentDetails,
+    paymentDetailsHash,
     paymentDetailsFields: {
-      token: USDC,
-      buyer: account,
-      value: value,
-      validAfter,
-      validBefore: expiresAt,
-      captureDeadline: MAX_UINT48,
       operator,
-      captureAddress: merchant,
-      feeBps,
-      feeRecipient,
+      payer: account,
+      receiver: receiver,
+      token: USDC,
+      maxAmount: value,
+      preApprovalExpiry: expiresAt,
+      authorizationExpiry: MAX_UINT48,
+      refundExpiry: MAX_UINT48,
+      minFeeBps: feeBps,
+      maxFeeBps: feeBps,
+      feeReceiver,
       salt,
     },
   });
@@ -90,9 +141,9 @@ export function prepareUsdcPayment({
     paymentDetails,
     authorization: prepareAuthorization({
       from: account,
-      to: PAYMENT_ESCROW,
+      to: ERC3009_TOKEN_COLLECTOR,
       value,
-      validAfter,
+      validAfter: 0,
       validBefore: expiresAt,
       nonce: paymentDetailsHash,
     }),

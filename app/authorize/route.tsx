@@ -1,5 +1,5 @@
 import { PaymentEscrowAbi } from '@/lib/abi/PaymentEscrow';
-import { PAYMENT_ESCROW } from '@/lib/constants';
+import { ERC3009_TOKEN_COLLECTOR, PAYMENT_ESCROW } from '@/lib/constants';
 import { operatorClient } from '@/lib/operator';
 import { NextRequest, NextResponse } from 'next/server';
 import { encodeFunctionData } from 'viem';
@@ -15,7 +15,8 @@ export async function POST(request: NextRequest) {
     }
 
     const value = body?.value ?? authorization.value
-    const txHash = await operatorClient.sendTransaction({to: PAYMENT_ESCROW, data: encodeFunctionData({abi: PaymentEscrowAbi, functionName: "authorize", args: [value, paymentDetails, signature]})})
+    console.log({value, ERC3009_TOKEN_COLLECTOR})
+    const txHash = await operatorClient.sendTransaction({to: PAYMENT_ESCROW, data: encodeFunctionData({abi: PaymentEscrowAbi, functionName: "authorize", args: [paymentDetails, value, ERC3009_TOKEN_COLLECTOR, signature]})})
     console.log({txHash})
     
     return NextResponse.json({ txHash }, { status: 200 });

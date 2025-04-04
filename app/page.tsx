@@ -2,14 +2,14 @@
 
 import Link from "next/link";
 import { useBasePay } from "../lib/hooks";
-import { FEE_BPS, FEE_RECIPIENT, MERCHANT, OPERATOR } from "@/lib/constants";
+import { FEE_BPS, FEE_RECEIVER, MERCHANT, OPERATOR } from "@/lib/constants";
 import { baseSepolia } from "viem/chains";
 
 export default function App() {
   // TODO fill in
-  const merchant = MERCHANT
+  const receiver = MERCHANT
   const feeBps = FEE_BPS
-  const feeRecipient = FEE_RECIPIENT
+  const feeReceiver = FEE_RECEIVER
 
   const {authorization, signature, authorizationTxHash, captureTxHash, requestUsdcPayment, authorizeUsdcPayment, captureUsdcPayment} = useBasePay()
 
@@ -21,9 +21,9 @@ export default function App() {
           onClick={() => requestUsdcPayment({
             usdAmount: 0.01, 
             operator: OPERATOR, 
-            merchant, 
+            receiver, 
             feeBps, 
-            feeRecipient, 
+            feeReceiver, 
             expiresAt: Math.ceil(Date.now() / 1000) + 60 * 60 * 24 * 365
           })
         }>

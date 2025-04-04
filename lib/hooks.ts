@@ -6,11 +6,12 @@ import { API_ACCOUNT } from "./constants";
 
 export function useBasePay(args?: { useApiAccount?: boolean }) {
   const account = useAccount();
+  const chainId = useChainId();
   const { signPayment } = useSignPayment({
     useApiAccount: args?.useApiAccount,
   });
   const [authorization, setAuthorization] = useState<Authorization>();
-  const [paymentDetails, setPaymentDetails] = useState<Hex>();
+  const [paymentDetails, setPaymentDetails] = useState<any>();
   const [signature, setSignature] = useState<Hex>();
   const [authorizationTxHash, setAuthorizationTxHash] = useState<Hex>();
   const [captureTxHash, setCaptureTxHash] = useState<Hex>();
@@ -18,25 +19,26 @@ export function useBasePay(args?: { useApiAccount?: boolean }) {
   async function requestUsdcPayment({
     usdAmount,
     operator,
-    merchant,
+    receiver,
     feeBps,
-    feeRecipient,
+    feeReceiver,
     expiresAt,
   }: {
     usdAmount: number;
     operator: Address;
-    merchant: Address;
+    receiver: Address;
     feeBps: number;
-    feeRecipient: Address;
+    feeReceiver: Address;
     expiresAt: number; // unix seconds
   }) {
     let { authorization, paymentDetails } = prepareUsdcPayment({
+      chainId,
       account: account.address ?? zeroAddress,
       usdAmount,
       operator,
-      merchant,
+      receiver,
       feeBps,
-      feeRecipient,
+      feeReceiver,
       expiresAt,
     });
 
