@@ -5,6 +5,7 @@ import {
   Hex,
   keccak256,
   parseUnits,
+  zeroAddress,
 } from "viem";
 import { privateKeyToAccount } from "viem/accounts";
 import { http, createPublicClient } from "viem";
@@ -91,7 +92,7 @@ export function prepareUsdcPayment({
     ],
     [
       operator,
-      account,
+      zeroAddress, // payer, null for offchain convenience generating in backend
       receiver,
       USDC,
       value,
@@ -139,39 +140,14 @@ export function prepareUsdcPayment({
 
   return {
     paymentDetails,
-    authorization: prepareAuthorization({
+    authorization: {
       from: account,
       to: ERC3009_TOKEN_COLLECTOR,
       value,
       validAfter: 0,
       validBefore: expiresAt,
       nonce: paymentDetailsHash,
-    }),
-  };
-}
-
-export function prepareAuthorization({
-  from,
-  to,
-  value,
-  validAfter,
-  validBefore,
-  nonce,
-}: {
-  from: Address;
-  to: Address;
-  value: bigint;
-  validAfter?: number;
-  validBefore?: number;
-  nonce: Hex;
-}) {
-  return {
-    from,
-    to,
-    value,
-    validAfter: validAfter ?? Math.ceil(Date.now() / 1000),
-    validBefore: validBefore ?? MAX_UINT48,
-    nonce,
+    },
   };
 }
 
